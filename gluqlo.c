@@ -52,7 +52,8 @@ TTF_Font *font_time = NULL;
 TTF_Font *font_mode = NULL;
 
 const SDL_Color FONT_COLOR = { 0xb7, 0xb7, 0xb7 };
-const SDL_Color BACKGROUND_COLOR = { 0x0f, 0x0f, 0x0f };
+//const SDL_Color BACKGROUND_COLOR = { 0x0f, 0x0f, 0x0f };
+const SDL_Color BACKGROUND_COLOR = { 0x33, 0x33, 0x33 };  // 更亮的灰色
 
 SDL_Surface *screen;
 
@@ -139,6 +140,13 @@ void render_ampm(SDL_Surface *surface, SDL_Rect *rect, int pm) {
 
 
 void blit_digits(SDL_Surface *surface, SDL_Rect *rect, int spc, char digits[], SDL_Color color) {
+	
+	// 阴影相关
+	SDL_Color shadow_color = {0, 0, 0, 180}; // 180为alpha，如果SDL不支持alpha可以直接用纯黑
+	int shadow_offset = 3; // 阴影偏移像素，可根据美观调整
+	SDL_Surface *shadow_glyph;
+	SDL_Rect shadow_coords;
+
 	int min_x, max_x, min_y, max_y, advance;
 	int adjust_x = (digits[0] == '1') ? 2.5 * spc : 0; // special case
 	int center_x = rect->x + rect->w / 2 - adjust_x;
@@ -146,23 +154,47 @@ void blit_digits(SDL_Surface *surface, SDL_Rect *rect, int spc, char digits[], S
 	SDL_Surface *glyph;
 	SDL_Rect coords;
 
-	if(digits[1]) {
-		// first digit
+	// 以渲染第一个数字为例：
+	if (digits[1]) {
+		// 渲染第一个数字阴影
 		TTF_GlyphMetrics(font_time, digits[0], &min_x, &max_x, &min_y, &max_y, &advance);
+		shadow_glyph = TTF_RenderGlyph_Blended(font_time, digits[0], shadow_color);
+		shadow_coords.x = center_x - max_x + min_x - spc - (adjust_x ? spc : 0) + shadow_offset;
+		shadow_coords.y = rect->y + (rect->h - shadow_glyph->h) / 2 + shadow_offset;
+		SDL_BlitSurface(shadow_glyph, 0, surface, &shadow_coords);
+		SDL_FreeSurface(shadow_glyph);
+
+		// 再正常渲染主数字
 		glyph = TTF_RenderGlyph_Blended(font_time, digits[0], color);
 		coords.x = center_x - max_x + min_x - spc - (adjust_x ? spc : 0);
 		coords.y = rect->y + (rect->h - glyph->h) / 2;
 		SDL_BlitSurface(glyph, 0, surface, &coords);
 		SDL_FreeSurface(glyph);
-		// second digit
+
+		// 渲染第二个数字阴影
 		TTF_GlyphMetrics(font_time, digits[1], &min_x, &max_x, &min_y, &max_y, &advance);
+		shadow_glyph = TTF_RenderGlyph_Blended(font_time, digits[1], shadow_color);
+		shadow_coords.x = center_x + spc / 2 + shadow_offset;
+		shadow_coords.y = rect->y + (rect->h - shadow_glyph->h) / 2 + shadow_offset;
+		SDL_BlitSurface(shadow_glyph, 0, surface, &shadow_coords);
+		SDL_FreeSurface(shadow_glyph);
+
+		// 再正常渲染第二个数字
 		glyph = TTF_RenderGlyph_Blended(font_time, digits[1], color);
-		coords.y = rect->y + (rect->h - glyph->h) / 2;
 		coords.x = center_x + spc / 2;
+		coords.y = rect->y + (rect->h - glyph->h) / 2;
 		SDL_BlitSurface(glyph, 0, surface, &coords);
 		SDL_FreeSurface(glyph);
+
 	} else {
-		// single digit
+		// 单数字阴影
+		shadow_glyph = TTF_RenderGlyph_Blended(font_time, digits[0], shadow_color);
+		shadow_coords.x = center_x - shadow_glyph->w / 2 + shadow_offset;
+		shadow_coords.y = rect->y + (rect->h - shadow_glyph->h) / 2 + shadow_offset;
+		SDL_BlitSurface(shadow_glyph, 0, surface, &shadow_coords);
+		SDL_FreeSurface(shadow_glyph);
+
+		// 单数字正常渲染
 		glyph = TTF_RenderGlyph_Blended(font_time, digits[0], color);
 		coords.x = center_x - glyph->w / 2;
 		coords.y = rect->y + (rect->h - glyph->h) / 2;
